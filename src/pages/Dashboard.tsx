@@ -110,6 +110,7 @@ const Dashboard = () => {
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [documentType, setDocumentType] = useState<'proposal' | 'invoice'>('proposal');
+  const [dealsView, setDealsView] = useState<'list' | 'kanban'>('kanban');
 
   const userName = localStorage.getItem('userName') || 'Админ';
   const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -614,6 +615,26 @@ const Dashboard = () => {
                 <p className="text-muted-foreground mt-1">Управление всеми сделками</p>
               </div>
               <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                  <Button 
+                    variant={dealsView === 'kanban' ? 'default' : 'ghost'} 
+                    size="sm"
+                    onClick={() => setDealsView('kanban')}
+                    className="gap-2"
+                  >
+                    <Icon name="Kanban" size={16} />
+                    Воронка
+                  </Button>
+                  <Button 
+                    variant={dealsView === 'list' ? 'default' : 'ghost'} 
+                    size="sm"
+                    onClick={() => setDealsView('list')}
+                    className="gap-2"
+                  >
+                    <Icon name="List" size={16} />
+                    Список
+                  </Button>
+                </div>
                 <Input
                   placeholder="Поиск сделок..."
                   className="w-64"
@@ -627,14 +648,93 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <Tabs defaultValue="all" className="w-full">
-              <TabsList>
-                <TabsTrigger value="all">Все сделки</TabsTrigger>
-                <TabsTrigger value="Заявка">Заявка</TabsTrigger>
-                <TabsTrigger value="Переговоры">Переговоры</TabsTrigger>
-                <TabsTrigger value="Принятие решения">Принятие решения</TabsTrigger>
-                <TabsTrigger value="Успех">Успех</TabsTrigger>
-              </TabsList>
+            {dealsView === 'kanban' ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Icon name="Kanban" size={20} />
+                    Воронка продаж
+                  </CardTitle>
+                  <CardDescription>Перетаскивайте сделки между этапами для изменения статуса</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={handleDragOver}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {funnelStages.map((stage) => (
+                        <div key={stage.name} className="space-y-3">
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <Badge className={stage.color}>{stage.name}</Badge>
+                            <span className="text-sm font-semibold text-muted-foreground">{dealsByStage(stage.name).length}</span>
+                          </div>
+                          
+                          <SortableContext
+                            items={dealsByStage(stage.name).map(d => d.id.toString())}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <div className="space-y-3 min-h-[400px] bg-gray-50/50 rounded-lg p-3">
+                              {dealsByStage(stage.name).map((deal) => (
+                                <SortableItem key={deal.id} id={deal.id.toString()}>
+                                  <Card 
+                                    className="cursor-move hover:shadow-lg transition-all border-l-4 border-l-primary bg-white"
+                                  >
+                                    <CardContent className="p-4">
+                                      <div onClick={() => handleOpenDeal(deal)}>
+                                        <h4 className="font-semibold text-base text-foreground mb-2">{deal.title}</h4>
+                                        <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                                          <Icon name="Building2" size={14} />
+                                          {deal.company}
+                                        </p>
+                                        <div className="space-y-2">
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-xs text-muted-foreground">Сумма:</span>
+                                            <span className="text-base font-bold text-foreground">
+                                              ₽{(deal.amount / 1000).toFixed(0)}K
+                                            </span>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-xs text-muted-foreground">Вероятность:</span>
+                                              <span className="text-xs font-medium text-foreground">{deal.probability}%</span>
+                                            </div>
+                                            <Progress value={deal.probability} className="h-1.5" />
+                                          </div>
+                                          <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
+                                            <Icon name="User" size={12} />
+                                            <span>{deal.contact}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                </SortableItem>
+                              ))}
+                              {dealsByStage(stage.name).length === 0 && (
+                                <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+                                  Перетащите сюда сделки
+                                </div>
+                              )}
+                            </div>
+                          </SortableContext>
+                        </div>
+                      ))}
+                    </div>
+                  </DndContext>
+                </CardContent>
+              </Card>
+            ) : (
+              <Tabs defaultValue="all" className="w-full">
+                <TabsList>
+                  <TabsTrigger value="all">Все сделки</TabsTrigger>
+                  <TabsTrigger value="Заявка">Заявка</TabsTrigger>
+                  <TabsTrigger value="Переговоры">Переговоры</TabsTrigger>
+                  <TabsTrigger value="Принятие решения">Принятие решения</TabsTrigger>
+                  <TabsTrigger value="Успех">Успех</TabsTrigger>
+                </TabsList>
               
               <TabsContent value="all" className="space-y-4">
                 {deals.map((deal) => (
@@ -745,7 +845,8 @@ const Dashboard = () => {
                   ))}
                 </TabsContent>
               ))}
-            </Tabs>
+              </Tabs>
+            )}
           </div>
         )}
 
