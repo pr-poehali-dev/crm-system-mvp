@@ -22,7 +22,7 @@ const Index = () => {
   const [activeSection, setActiveSection] = useState<NavItem>('dashboard');
 
   const navItems: { id: NavItem; label: string; icon: string }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard' },
+    { id: 'dashboard', label: 'Главная', icon: 'LayoutDashboard' },
     { id: 'deals', label: 'Сделки', icon: 'TrendingUp' },
     { id: 'contacts', label: 'Контакты', icon: 'Users' },
     { id: 'companies', label: 'Компании', icon: 'Building2' },
@@ -103,7 +103,7 @@ const Index = () => {
           <div className="space-y-6 animate-fade-in">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+                <h1 className="text-3xl font-bold text-foreground">Главная</h1>
                 <p className="text-muted-foreground mt-1">Обзор вашей воронки продаж</p>
               </div>
               <Button className="gap-2">
