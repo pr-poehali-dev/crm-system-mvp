@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverEvent, useDroppable } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -123,6 +123,21 @@ function SortableItem({ id, children, onCardClick }: { id: string; children: Rea
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       className="cursor-move"
+    >
+      {children}
+    </div>
+  );
+}
+
+function DroppableStage({ id, children }: { id: string; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      className={`space-y-2 min-h-[200px] bg-gray-50 rounded-lg p-3 transition-colors ${
+        isOver ? 'bg-primary/10 ring-2 ring-primary' : ''
+      }`}
     >
       {children}
     </div>
@@ -345,12 +360,26 @@ const Dashboard = () => {
     if (!over) return;
 
     const activeDealId = Number(active.id);
-    const overDealId = Number(over.id);
-    
     const activeDeal = deals.find(d => d.id === activeDealId);
+    
+    if (!activeDeal) return;
+
+    const overIdStr = over.id.toString();
+    
+    if (overIdStr.startsWith('stage-')) {
+      const newStage = overIdStr.replace('stage-', '');
+      if (activeDeal.stage !== newStage) {
+        setDeals(deals.map(deal => 
+          deal.id === activeDealId ? { ...deal, stage: newStage } : deal
+        ));
+      }
+      return;
+    }
+    
+    const overDealId = Number(over.id);
     const overDeal = deals.find(d => d.id === overDealId);
 
-    if (!activeDeal || !overDeal) return;
+    if (!overDeal) return;
     if (activeDeal.stage === overDeal.stage) return;
 
     setDeals(deals.map(deal => 
@@ -591,7 +620,7 @@ const Dashboard = () => {
                           items={dealsByStage(stage.name).map(d => d.id.toString())}
                           strategy={verticalListSortingStrategy}
                         >
-                          <div className="space-y-2 min-h-[200px] bg-gray-50 rounded-lg p-3">
+                          <DroppableStage id={`stage-${stage.name}`}>
                             {dealsByStage(stage.name).map((deal) => (
                               <div key={deal.id} className="relative group">
                                 <SortableItem id={deal.id.toString()} onCardClick={() => handleOpenDeal(deal)}>
@@ -615,7 +644,12 @@ const Dashboard = () => {
                                 </SortableItem>
                               </div>
                             ))}
-                          </div>
+                            {dealsByStage(stage.name).length === 0 && (
+                              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                                Перетащите сюда
+                              </div>
+                            )}
+                          </DroppableStage>
                         </SortableContext>
                       </div>
                     ))}
