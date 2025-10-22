@@ -295,10 +295,10 @@ const Dashboard = () => {
 
   const totalDeals = deals.length;
   const uniqueCompanies = new Set(deals.map(d => d.company)).size;
-  const successfulDeals = deals.filter(d => d.stage === 'Успех').length;
-  const conversionRate = totalDeals > 0 ? Math.round((successfulDeals / totalDeals) * 100) : 0;
-  const averageCheck = deals.length > 0 
-    ? Math.round(deals.reduce((sum, d) => sum + d.amount, 0) / deals.length / 1000) 
+  const successfulDeals = deals.filter(d => d.stage === 'Успех');
+  const conversionRate = totalDeals > 0 ? Math.round((successfulDeals.length / totalDeals) * 100) : 0;
+  const averageCheck = successfulDeals.length > 0 
+    ? Math.round(successfulDeals.reduce((sum, d) => sum + d.amount, 0) / successfulDeals.length / 1000) 
     : 0;
 
   const stats = [
