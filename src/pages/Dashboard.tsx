@@ -80,7 +80,7 @@ interface Document {
   date: string;
 }
 
-function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
+function SortableItem({ id, children, onCardClick }: { id: string; children: React.ReactNode; onCardClick?: () => void }) {
   const {
     attributes,
     listeners,
@@ -97,8 +97,13 @@ function SortableItem({ id, children }: { id: string; children: React.ReactNode 
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {children}
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <div onClick={onCardClick}>
+        {children}
+      </div>
+      <div {...listeners} className="absolute top-2 right-2 cursor-move p-1 bg-white/80 rounded hover:bg-white transition-colors opacity-0 group-hover:opacity-100">
+        <Icon name="GripVertical" size={16} className="text-muted-foreground" />
+      </div>
     </div>
   );
 }
@@ -559,36 +564,27 @@ const Dashboard = () => {
                         >
                           <div className="space-y-2 min-h-[200px] bg-gray-50 rounded-lg p-3">
                             {dealsByStage(stage.name).map((deal) => (
-                              <SortableItem key={deal.id} id={deal.id.toString()}>
-                                <Card 
-                                  className="cursor-pointer hover:shadow-md transition-all border-l-4 border-l-primary group"
-                                  onClick={(e) => {
-                                    if ((e.target as HTMLElement).closest('.sortable-drag-handle')) {
-                                      return;
-                                    }
-                                    handleOpenDeal(deal);
-                                  }}
-                                >
-                                  <CardContent className="p-4">
-                                    <div className="flex items-start justify-between mb-2">
-                                      <h4 className="font-semibold text-sm text-foreground flex-1">{deal.title}</h4>
-                                      <div className="sortable-drag-handle cursor-move p-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
-                                        <Icon name="GripVertical" size={14} className="text-muted-foreground" />
+                              <div key={deal.id} className="relative group">
+                                <SortableItem id={deal.id.toString()} onCardClick={() => handleOpenDeal(deal)}>
+                                  <Card 
+                                    className="cursor-pointer hover:shadow-md transition-all border-l-4 border-l-primary"
+                                  >
+                                    <CardContent className="p-4">
+                                      <h4 className="font-semibold text-sm text-foreground mb-2">{deal.title}</h4>
+                                      <p className="text-xs text-muted-foreground mb-2">{deal.company}</p>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-sm font-bold text-foreground">
+                                          ₽{(deal.amount / 1000).toFixed(0)}K
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                          <Progress value={deal.probability} className="w-12 h-1" />
+                                          <span className="text-xs text-muted-foreground">{deal.probability}%</span>
+                                        </div>
                                       </div>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground mb-2">{deal.company}</p>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-sm font-bold text-foreground">
-                                        ₽{(deal.amount / 1000).toFixed(0)}K
-                                      </span>
-                                      <div className="flex items-center gap-1">
-                                        <Progress value={deal.probability} className="w-12 h-1" />
-                                        <span className="text-xs text-muted-foreground">{deal.probability}%</span>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              </SortableItem>
+                                    </CardContent>
+                                  </Card>
+                                </SortableItem>
+                              </div>
                             ))}
                           </div>
                         </SortableContext>
@@ -731,51 +727,42 @@ const Dashboard = () => {
                           >
                             <div className="space-y-3 min-h-[400px] bg-gray-50/50 rounded-lg p-3">
                               {dealsByStage(stage.name).map((deal) => (
-                                <SortableItem key={deal.id} id={deal.id.toString()}>
-                                  <Card 
-                                    className="cursor-move hover:shadow-lg transition-all border-l-4 border-l-primary bg-white group"
-                                    onClick={(e) => {
-                                      if ((e.target as HTMLElement).closest('.sortable-drag-handle')) {
-                                        return;
-                                      }
-                                      handleOpenDeal(deal);
-                                    }}
-                                  >
-                                    <CardContent className="p-4">
-                                      <div>
-                                        <div className="flex items-start justify-between mb-2">
-                                          <h4 className="font-semibold text-base text-foreground flex-1">{deal.title}</h4>
-                                          <div className="sortable-drag-handle cursor-move p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Icon name="GripVertical" size={16} className="text-muted-foreground" />
-                                          </div>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
-                                          <Icon name="Building2" size={14} />
-                                          {deal.company}
-                                        </p>
-                                        <div className="space-y-2">
-                                          <div className="flex items-center justify-between">
-                                            <span className="text-xs text-muted-foreground">Сумма:</span>
-                                            <span className="text-base font-bold text-foreground">
-                                              ₽{(deal.amount / 1000).toFixed(0)}K
-                                            </span>
-                                          </div>
-                                          <div className="space-y-1">
+                                <div key={deal.id} className="relative group">
+                                  <SortableItem id={deal.id.toString()} onCardClick={() => handleOpenDeal(deal)}>
+                                    <Card 
+                                      className="cursor-pointer hover:shadow-lg transition-all border-l-4 border-l-primary bg-white"
+                                    >
+                                      <CardContent className="p-4">
+                                        <div>
+                                          <h4 className="font-semibold text-base text-foreground mb-2">{deal.title}</h4>
+                                          <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                                            <Icon name="Building2" size={14} />
+                                            {deal.company}
+                                          </p>
+                                          <div className="space-y-2">
                                             <div className="flex items-center justify-between">
-                                              <span className="text-xs text-muted-foreground">Вероятность:</span>
-                                              <span className="text-xs font-medium text-foreground">{deal.probability}%</span>
+                                              <span className="text-xs text-muted-foreground">Сумма:</span>
+                                              <span className="text-base font-bold text-foreground">
+                                                ₽{(deal.amount / 1000).toFixed(0)}K
+                                              </span>
                                             </div>
-                                            <Progress value={deal.probability} className="h-1.5" />
-                                          </div>
-                                          <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
-                                            <Icon name="User" size={12} />
-                                            <span>{deal.contact}</span>
+                                            <div className="space-y-1">
+                                              <div className="flex items-center justify-between">
+                                                <span className="text-xs text-muted-foreground">Вероятность:</span>
+                                                <span className="text-xs font-medium text-foreground">{deal.probability}%</span>
+                                              </div>
+                                              <Progress value={deal.probability} className="h-1.5" />
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
+                                              <Icon name="User" size={12} />
+                                              <span>{deal.contact}</span>
+                                            </div>
                                           </div>
                                         </div>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                </SortableItem>
+                                      </CardContent>
+                                    </Card>
+                                  </SortableItem>
+                                </div>
                               ))}
                               {dealsByStage(stage.name).length === 0 && (
                                 <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
