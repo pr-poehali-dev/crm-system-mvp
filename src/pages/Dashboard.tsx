@@ -38,6 +38,7 @@ interface Deal {
   createdAt: string;
   comments: Comment[];
   description?: string;
+  lostReason?: string;
 }
 
 interface Contact {
@@ -152,6 +153,10 @@ const Dashboard = () => {
   const [newComment, setNewComment] = useState('');
   const [documentType, setDocumentType] = useState<'proposal' | 'invoice'>('proposal');
   const [dealsView, setDealsView] = useState<'list' | 'kanban'>('kanban');
+  const [lostReasonDialogOpen, setLostReasonDialogOpen] = useState(false);
+  const [pendingLostDeal, setPendingLostDeal] = useState<Deal | null>(null);
+  const [selectedLostReason, setSelectedLostReason] = useState('');
+  const [customLostReason, setCustomLostReason] = useState('');
 
   const userName = localStorage.getItem('userName') || 'Админ';
   const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -193,7 +198,7 @@ const Dashboard = () => {
       title: 'Внедрение CRM', 
       company: 'ИП Смирнов', 
       amount: 450000, 
-      stage: 'Принятие решения', 
+      stage: 'Отправка КП', 
       contact: 'Анна Смирнова', 
       probability: 50, 
       createdAt: '2024-10-18',
@@ -219,7 +224,7 @@ const Dashboard = () => {
       title: 'Поставка ПО', 
       company: 'ООО "БетаСофт"', 
       amount: 890000, 
-      stage: 'Переговоры', 
+      stage: 'Запущено в работу', 
       contact: 'Мария Волкова', 
       probability: 65, 
       createdAt: '2024-10-19',
@@ -245,7 +250,7 @@ const Dashboard = () => {
       title: 'Договор поставки оборудования', 
       company: 'ООО "Гамма"', 
       amount: 2100000, 
-      stage: 'Успех', 
+      stage: 'Сделка закрыта', 
       contact: 'Елена Петрова', 
       probability: 100, 
       createdAt: '2024-09-15',
@@ -259,7 +264,7 @@ const Dashboard = () => {
       title: 'IT-консалтинг', 
       company: 'ООО "Эпсилон"', 
       amount: 650000, 
-      stage: 'Успех', 
+      stage: 'Сделка закрыта', 
       contact: 'Дмитрий Соколов', 
       probability: 100, 
       createdAt: '2024-09-20',
@@ -301,14 +306,15 @@ const Dashboard = () => {
 
   const funnelStages = [
     { name: 'Заявка', count: 12, color: 'bg-blue-100 text-blue-700' },
-    { name: 'Переговоры', count: 8, color: 'bg-purple-100 text-purple-700' },
-    { name: 'Принятие решения', count: 5, color: 'bg-amber-100 text-amber-700' },
-    { name: 'Успех', count: 3, color: 'bg-green-100 text-green-700' },
+    { name: 'Отправка КП', count: 8, color: 'bg-purple-100 text-purple-700' },
+    { name: 'Запущено в работу', count: 5, color: 'bg-cyan-100 text-cyan-700' },
+    { name: 'Сделка закрыта', count: 3, color: 'bg-green-100 text-green-700' },
+    { name: 'Сделка не состоялась', count: 1, color: 'bg-red-100 text-red-700' },
   ];
 
   const totalDeals = deals.length;
   const uniqueCompanies = new Set(deals.map(d => d.company)).size;
-  const successfulDeals = deals.filter(d => d.stage === 'Успех');
+  const successfulDeals = deals.filter(d => d.stage === 'Сделка закрыта');
   const conversionRate = totalDeals > 0 ? Math.round((successfulDeals.length / totalDeals) * 100) : 0;
   const averageCheck = successfulDeals.length > 0 
     ? Math.round(successfulDeals.reduce((sum, d) => sum + d.amount, 0) / successfulDeals.length) 
@@ -366,6 +372,13 @@ const Dashboard = () => {
     
     if (overIdStr.startsWith('stage-')) {
       const newStage = overIdStr.replace('stage-', '');
+      
+      if (newStage === 'Сделка не состоялась' && activeDeal.stage !== newStage) {
+        setPendingLostDeal(activeDeal);
+        setLostReasonDialogOpen(true);
+        return;
+      }
+      
       if (activeDeal.stage !== newStage) {
         setDeals(deals.map(deal => 
           deal.id === activeDealId ? { ...deal, stage: newStage } : deal
@@ -378,6 +391,13 @@ const Dashboard = () => {
     const overDeal = deals.find(d => d.id === overDealId);
 
     if (!overDeal) return;
+    
+    if (overDeal.stage === 'Сделка не состоялась' && activeDeal.stage !== overDeal.stage) {
+      setPendingLostDeal(activeDeal);
+      setLostReasonDialogOpen(true);
+      return;
+    }
+    
     if (activeDeal.stage === overDeal.stage) return;
 
     setDeals(deals.map(deal => 
@@ -394,6 +414,32 @@ const Dashboard = () => {
   const handleOpenDeal = (deal: Deal) => {
     setSelectedDeal(deal);
     setDealDialogOpen(true);
+  };
+
+  const handleConfirmLostDeal = () => {
+    if (!pendingLostDeal) return;
+    
+    const reason = selectedLostReason === 'Другое' ? customLostReason : selectedLostReason;
+    
+    if (!reason) return;
+    
+    setDeals(deals.map(deal => 
+      deal.id === pendingLostDeal.id 
+        ? { ...deal, stage: 'Сделка не состоялась', lostReason: reason } 
+        : deal
+    ));
+    
+    setLostReasonDialogOpen(false);
+    setPendingLostDeal(null);
+    setSelectedLostReason('');
+    setCustomLostReason('');
+  };
+
+  const handleCancelLostDeal = () => {
+    setLostReasonDialogOpen(false);
+    setPendingLostDeal(null);
+    setSelectedLostReason('');
+    setCustomLostReason('');
   };
 
   const handleAddComment = () => {
@@ -1741,6 +1787,56 @@ const Dashboard = () => {
             </Button>
             <Button onClick={handleCreateDocument}>
               Создать {documentType === 'proposal' ? 'КП' : 'счет'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={lostReasonDialogOpen} onOpenChange={handleCancelLostDeal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Причина отказа</DialogTitle>
+            <DialogDescription>
+              Укажите причину, почему сделка не состоялась: {pendingLostDeal?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-3">
+              {['Дорого', 'Не устроили сроки', 'Выбрали конкурента', 'Не вышли на связь', 'Другое'].map((reason) => (
+                <label key={reason} className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="lostReason"
+                    value={reason}
+                    checked={selectedLostReason === reason}
+                    onChange={(e) => setSelectedLostReason(e.target.value)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-foreground">{reason}</span>
+                </label>
+              ))}
+            </div>
+            {selectedLostReason === 'Другое' && (
+              <div className="space-y-2">
+                <Label>Укажите причину</Label>
+                <Textarea 
+                  placeholder="Опишите причину отказа..."
+                  value={customLostReason}
+                  onChange={(e) => setCustomLostReason(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelLostDeal}>
+              Отмена
+            </Button>
+            <Button 
+              onClick={handleConfirmLostDeal}
+              disabled={!selectedLostReason || (selectedLostReason === 'Другое' && !customLostReason.trim())}
+            >
+              Подтвердить
             </Button>
           </DialogFooter>
         </DialogContent>
