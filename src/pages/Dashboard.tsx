@@ -311,14 +311,14 @@ const Dashboard = () => {
   const successfulDeals = deals.filter(d => d.stage === 'Успех');
   const conversionRate = totalDeals > 0 ? Math.round((successfulDeals.length / totalDeals) * 100) : 0;
   const averageCheck = successfulDeals.length > 0 
-    ? Math.round(successfulDeals.reduce((sum, d) => sum + d.amount, 0) / successfulDeals.length / 1000) 
+    ? Math.round(successfulDeals.reduce((sum, d) => sum + d.amount, 0) / successfulDeals.length) 
     : 0;
 
   const stats = [
     { label: 'Всего сделок', value: totalDeals.toString(), change: '+12%', icon: 'TrendingUp', color: 'text-blue-600' },
     { label: 'Активных клиентов', value: uniqueCompanies.toString(), change: '+8%', icon: 'Users', color: 'text-purple-600' },
     { label: 'Конверсия', value: `${conversionRate}%`, change: '+3%', icon: 'Target', color: 'text-green-600' },
-    { label: 'Средний чек', value: `₽${averageCheck}K`, change: '+15%', icon: 'DollarSign', color: 'text-amber-600' },
+    { label: 'Средний чек', value: `₽${averageCheck.toLocaleString('ru-RU')}`, change: '+15%', icon: 'DollarSign', color: 'text-amber-600' },
   ];
 
   const sensors = useSensors(
@@ -630,7 +630,7 @@ const Dashboard = () => {
                                       <p className="text-xs text-muted-foreground mb-2">{deal.company}</p>
                                       <div className="flex items-center justify-between">
                                         <span className="text-sm font-bold text-foreground">
-                                          ₽{(deal.amount / 1000).toFixed(0)}K
+                                          ₽{deal.amount.toLocaleString('ru-RU')}
                                         </span>
                                         <div className="flex items-center gap-1">
                                           <Progress value={deal.probability} className="w-12 h-1" />
