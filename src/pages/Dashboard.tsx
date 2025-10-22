@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
@@ -10,10 +14,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 
 type NavItem = 'dashboard' | 'deals' | 'contacts' | 'companies' | 'tasks' | 'documents' | 'reports' | 'settings';
+
+interface Comment {
+  id: number;
+  author: string;
+  text: string;
+  date: string;
+}
 
 interface Deal {
   id: number;
@@ -24,6 +36,8 @@ interface Deal {
   contact: string;
   probability: number;
   createdAt: string;
+  comments: Comment[];
+  description?: string;
 }
 
 interface Contact {
@@ -66,10 +80,36 @@ interface Document {
   date: string;
 }
 
+function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {children}
+    </div>
+  );
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<NavItem>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [dealDialogOpen, setDealDialogOpen] = useState(false);
+  const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [documentType, setDocumentType] = useState<'proposal' | 'invoice'>('proposal');
 
   const userName = localStorage.getItem('userName') || 'Админ';
   const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -90,12 +130,63 @@ const Dashboard = () => {
     { id: 'settings', label: 'Настройки', icon: 'Settings' },
   ];
 
-  const deals: Deal[] = [
-    { id: 1, title: 'Поставка оборудования', company: 'ООО "Техносфера"', amount: 1200000, stage: 'Переговоры', contact: 'Иван Петров', probability: 70, createdAt: '2024-10-15' },
-    { id: 2, title: 'Внедрение CRM', company: 'ИП Смирнов', amount: 450000, stage: 'Принятие решения', contact: 'Анна Смирнова', probability: 50, createdAt: '2024-10-18' },
-    { id: 3, title: 'Консультационные услуги', company: 'ООО "Альфа"', amount: 280000, stage: 'Заявка', contact: 'Олег Кузнецов', probability: 30, createdAt: '2024-10-20' },
-    { id: 4, title: 'Поставка ПО', company: 'ООО "БетаСофт"', amount: 890000, stage: 'Переговоры', contact: 'Мария Волкова', probability: 65, createdAt: '2024-10-19' },
-  ];
+  const [deals, setDeals] = useState<Deal[]>([
+    { 
+      id: 1, 
+      title: 'Поставка оборудования', 
+      company: 'ООО "Техносфера"', 
+      amount: 1200000, 
+      stage: 'Переговоры', 
+      contact: 'Иван Петров', 
+      probability: 70, 
+      createdAt: '2024-10-15',
+      description: 'Поставка промышленного оборудования для автоматизации производства',
+      comments: [
+        { id: 1, author: 'Вы', text: 'Договорились о встрече на следующей неделе', date: '2024-10-20 14:30' },
+        { id: 2, author: 'Иван Петров', text: 'Отправил ТЗ на оборудование', date: '2024-10-21 10:15' },
+      ]
+    },
+    { 
+      id: 2, 
+      title: 'Внедрение CRM', 
+      company: 'ИП Смирнов', 
+      amount: 450000, 
+      stage: 'Принятие решения', 
+      contact: 'Анна Смирнова', 
+      probability: 50, 
+      createdAt: '2024-10-18',
+      description: 'Внедрение CRM-системы для управления клиентами',
+      comments: [
+        { id: 3, author: 'Вы', text: 'Провели демо системы', date: '2024-10-19 16:00' },
+      ]
+    },
+    { 
+      id: 3, 
+      title: 'Консультационные услуги', 
+      company: 'ООО "Альфа"', 
+      amount: 280000, 
+      stage: 'Заявка', 
+      contact: 'Олег Кузнецов', 
+      probability: 30, 
+      createdAt: '2024-10-20',
+      description: 'Консультации по оптимизации бизнес-процессов',
+      comments: []
+    },
+    { 
+      id: 4, 
+      title: 'Поставка ПО', 
+      company: 'ООО "БетаСофт"', 
+      amount: 890000, 
+      stage: 'Переговоры', 
+      contact: 'Мария Волкова', 
+      probability: 65, 
+      createdAt: '2024-10-19',
+      description: 'Поставка лицензий на корпоративное ПО',
+      comments: [
+        { id: 4, author: 'Мария Волкова', text: 'Нужно коммерческое предложение', date: '2024-10-21 11:20' },
+      ]
+    },
+  ]);
 
   const contacts: Contact[] = [
     { id: 1, name: 'Иван Петров', email: 'ivan@techno.ru', phone: '+7 (495) 123-45-67', company: 'ООО "Техносфера"', position: 'Директор', tags: ['VIP', 'Партнер'] },
@@ -140,6 +231,77 @@ const Dashboard = () => {
     { label: 'Средний чек', value: '₽680K', change: '+15%', icon: 'DollarSign', color: 'text-amber-600' },
   ];
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent, stage: string) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const stageDeals = deals.filter(d => d.stage === stage);
+      const oldIndex = stageDeals.findIndex(d => d.id.toString() === active.id);
+      const newIndex = stageDeals.findIndex(d => d.id.toString() === over.id);
+
+      const reorderedStageDeals = arrayMove(stageDeals, oldIndex, newIndex);
+      
+      const otherDeals = deals.filter(d => d.stage !== stage);
+      setDeals([...otherDeals, ...reorderedStageDeals]);
+    }
+  };
+
+  const handleDealStageChange = (dealId: number, newStage: string) => {
+    setDeals(deals.map(deal => 
+      deal.id === dealId ? { ...deal, stage: newStage } : deal
+    ));
+  };
+
+  const handleOpenDeal = (deal: Deal) => {
+    setSelectedDeal(deal);
+    setDealDialogOpen(true);
+  };
+
+  const handleAddComment = () => {
+    if (!selectedDeal || !newComment.trim()) return;
+
+    const updatedDeal = {
+      ...selectedDeal,
+      comments: [
+        ...selectedDeal.comments,
+        {
+          id: Date.now(),
+          author: userName,
+          text: newComment,
+          date: new Date().toLocaleString('ru-RU'),
+        },
+      ],
+    };
+
+    setDeals(deals.map(d => d.id === selectedDeal.id ? updatedDeal : d));
+    setSelectedDeal(updatedDeal);
+    setNewComment('');
+  };
+
+  const handleCreateDocument = () => {
+    if (!selectedDeal) return;
+    
+    const newDoc = {
+      id: documents.length + 1,
+      type: documentType,
+      number: documentType === 'proposal' ? `КП-${String(documents.length + 1).padStart(3, '0')}` : `СЧ-${String(documents.length + 1).padStart(3, '0')}`,
+      client: selectedDeal.company,
+      amount: selectedDeal.amount,
+      status: 'draft' as const,
+      date: new Date().toISOString().split('T')[0],
+    };
+    
+    setDocumentDialogOpen(false);
+    setActiveSection('documents');
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
       draft: 'bg-gray-100 text-gray-700',
@@ -165,6 +327,8 @@ const Dashboard = () => {
     };
     return labels[status] || status;
   };
+
+  const dealsByStage = (stage: string) => deals.filter(d => d.stage === stage);
 
   return (
     <div className="min-h-screen bg-background">
@@ -295,33 +459,90 @@ const Dashboard = () => {
               ))}
             </div>
 
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Icon name="Filter" size={20} />
+                  Воронка продаж (Drag & Drop)
+                </CardTitle>
+                <CardDescription>Перетащите карточки сделок между этапами</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {funnelStages.map((stage) => (
+                    <div key={stage.name} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Badge className={stage.color}>{stage.name}</Badge>
+                        <span className="text-sm text-muted-foreground">{dealsByStage(stage.name).length}</span>
+                      </div>
+                      
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event) => handleDragEnd(event, stage.name)}
+                      >
+                        <SortableContext
+                          items={dealsByStage(stage.name).map(d => d.id.toString())}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="space-y-2 min-h-[200px] bg-gray-50 rounded-lg p-3">
+                            {dealsByStage(stage.name).map((deal) => (
+                              <SortableItem key={deal.id} id={deal.id.toString()}>
+                                <Card 
+                                  className="cursor-move hover:shadow-md transition-all border-l-4 border-l-primary"
+                                  onClick={() => handleOpenDeal(deal)}
+                                >
+                                  <CardContent className="p-4">
+                                    <h4 className="font-semibold text-sm text-foreground mb-2">{deal.title}</h4>
+                                    <p className="text-xs text-muted-foreground mb-2">{deal.company}</p>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm font-bold text-foreground">
+                                        ₽{(deal.amount / 1000).toFixed(0)}K
+                                      </span>
+                                      <div className="flex items-center gap-1">
+                                        <Progress value={deal.probability} className="w-12 h-1" />
+                                        <span className="text-xs text-muted-foreground">{deal.probability}%</span>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </SortableItem>
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Icon name="Filter" size={20} />
-                    Воронка продаж
+                    <Icon name="Briefcase" size={20} />
+                    Последние сделки
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {funnelStages.map((stage, index) => {
-                      const conversion = index > 0 ? Math.round((stage.count / funnelStages[index - 1].count) * 100) : 100;
-                      return (
-                        <div key={stage.name} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Badge className={stage.color}>{stage.name}</Badge>
-                              <span className="text-sm text-muted-foreground">{stage.count} сделок</span>
-                            </div>
-                            {index > 0 && (
-                              <span className="text-sm font-medium text-green-600">{conversion}%</span>
-                            )}
-                          </div>
-                          <Progress value={(stage.count / funnelStages[0].count) * 100} className="h-3" />
+                  <div className="space-y-3">
+                    {deals.slice(0, 4).map((deal) => (
+                      <div 
+                        key={deal.id} 
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                        onClick={() => handleOpenDeal(deal)}
+                      >
+                        <div className="flex-1">
+                          <h4 className="font-medium text-foreground">{deal.title}</h4>
+                          <p className="text-sm text-muted-foreground">{deal.company}</p>
                         </div>
-                      );
-                    })}
+                        <div className="text-right">
+                          <p className="font-bold text-foreground">₽{deal.amount.toLocaleString('ru-RU')}</p>
+                          <Badge variant="outline" className="text-xs">{deal.stage}</Badge>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -354,65 +575,6 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
             </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Icon name="Briefcase" size={20} />
-                  Активные сделки
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Сделка</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Компания</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Контакт</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Этап</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Сумма</th>
-                        <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Вероятность</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {deals.map((deal) => (
-                        <tr key={deal.id} className="border-b border-border hover:bg-gray-50 transition-colors cursor-pointer">
-                          <td className="py-3 px-4">
-                            <div className="font-medium text-foreground">{deal.title}</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <Avatar className="w-6 h-6">
-                                <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
-                                  {deal.company.substring(4, 5)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm text-foreground">{deal.company}</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-muted-foreground">{deal.contact}</td>
-                          <td className="py-3 px-4">
-                            <Badge variant="outline" className="text-xs">
-                              {deal.stage}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4 text-right font-medium text-foreground">
-                            ₽{deal.amount.toLocaleString('ru-RU')}
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center justify-center gap-2">
-                              <Progress value={deal.probability} className="w-16 h-1.5" />
-                              <span className="text-xs text-muted-foreground w-8">{deal.probability}%</span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
 
@@ -440,15 +602,15 @@ const Dashboard = () => {
             <Tabs defaultValue="all" className="w-full">
               <TabsList>
                 <TabsTrigger value="all">Все сделки</TabsTrigger>
-                <TabsTrigger value="application">Заявка</TabsTrigger>
-                <TabsTrigger value="negotiation">Переговоры</TabsTrigger>
-                <TabsTrigger value="decision">Принятие решения</TabsTrigger>
-                <TabsTrigger value="success">Успех</TabsTrigger>
+                <TabsTrigger value="Заявка">Заявка</TabsTrigger>
+                <TabsTrigger value="Переговоры">Переговоры</TabsTrigger>
+                <TabsTrigger value="Принятие решения">Принятие решения</TabsTrigger>
+                <TabsTrigger value="Успех">Успех</TabsTrigger>
               </TabsList>
               
               <TabsContent value="all" className="space-y-4">
                 {deals.map((deal) => (
-                  <Card key={deal.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                  <Card key={deal.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleOpenDeal(deal)}>
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -1074,6 +1236,204 @@ const Dashboard = () => {
           </div>
         )}
       </main>
+
+      <Dialog open={dealDialogOpen} onOpenChange={setDealDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedDeal && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <DialogTitle className="text-2xl">{selectedDeal.title}</DialogTitle>
+                    <DialogDescription className="mt-2">
+                      {selectedDeal.company} • {selectedDeal.contact}
+                    </DialogDescription>
+                  </div>
+                  <Badge variant="outline" className="ml-4">{selectedDeal.stage}</Badge>
+                </div>
+              </DialogHeader>
+
+              <Tabs defaultValue="details" className="mt-4">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="details">Детали</TabsTrigger>
+                  <TabsTrigger value="comments">Комментарии ({selectedDeal.comments.length})</TabsTrigger>
+                  <TabsTrigger value="documents">Документы</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="details" className="space-y-6">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-muted-foreground">Сумма</Label>
+                        <p className="text-2xl font-bold text-foreground mt-1">
+                          ₽{selectedDeal.amount.toLocaleString('ru-RU')}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Вероятность</Label>
+                        <div className="flex items-center gap-3 mt-2">
+                          <Progress value={selectedDeal.probability} className="flex-1" />
+                          <span className="text-lg font-semibold">{selectedDeal.probability}%</span>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Этап воронки</Label>
+                        <Select 
+                          defaultValue={selectedDeal.stage}
+                          onValueChange={(value) => handleDealStageChange(selectedDeal.id, value)}
+                        >
+                          <SelectTrigger className="mt-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {funnelStages.map((stage) => (
+                              <SelectItem key={stage.name} value={stage.name}>{stage.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-muted-foreground">Компания</Label>
+                        <p className="text-lg font-medium text-foreground mt-1">{selectedDeal.company}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Контактное лицо</Label>
+                        <p className="text-lg font-medium text-foreground mt-1">{selectedDeal.contact}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Дата создания</Label>
+                        <p className="text-lg font-medium text-foreground mt-1">{selectedDeal.createdAt}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <Label className="text-muted-foreground">Описание</Label>
+                    <p className="text-foreground mt-2">{selectedDeal.description || 'Описание не указано'}</p>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="comments" className="space-y-4">
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {selectedDeal.comments.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Icon name="MessageSquare" size={48} className="mx-auto mb-2 opacity-50" />
+                        <p>Пока нет комментариев</p>
+                      </div>
+                    ) : (
+                      selectedDeal.comments.map((comment) => (
+                        <div key={comment.id} className="p-4 bg-gray-50 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <Avatar className="w-8 h-8">
+                              <AvatarFallback className="bg-primary text-white text-xs">
+                                {comment.author.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-sm">{comment.author}</span>
+                                <span className="text-xs text-muted-foreground">{comment.date}</span>
+                              </div>
+                              <p className="text-sm text-foreground">{comment.text}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <Label>Новый комментарий</Label>
+                    <Textarea
+                      placeholder="Добавьте комментарий..."
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      rows={3}
+                    />
+                    <Button onClick={handleAddComment} disabled={!newComment.trim()} className="w-full">
+                      <Icon name="Send" size={16} className="mr-2" />
+                      Отправить комментарий
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="documents" className="space-y-4">
+                  <div className="text-center py-8">
+                    <Icon name="FileText" size={48} className="mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <p className="text-muted-foreground mb-4">Создайте КП или счет для этой сделки</p>
+                    <div className="flex gap-3 justify-center">
+                      <Button 
+                        variant="outline" 
+                        className="gap-2"
+                        onClick={() => {
+                          setDocumentType('proposal');
+                          setDocumentDialogOpen(true);
+                        }}
+                      >
+                        <Icon name="FileText" size={16} />
+                        Создать КП
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="gap-2"
+                        onClick={() => {
+                          setDocumentType('invoice');
+                          setDocumentDialogOpen(true);
+                        }}
+                      >
+                        <Icon name="Receipt" size={16} />
+                        Создать счет
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={documentDialogOpen} onOpenChange={setDocumentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {documentType === 'proposal' ? 'Создать коммерческое предложение' : 'Создать счет'}
+            </DialogTitle>
+            <DialogDescription>
+              Документ будет создан для сделки: {selectedDeal?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Клиент</Label>
+              <Input value={selectedDeal?.company || ''} disabled />
+            </div>
+            <div className="space-y-2">
+              <Label>Сумма</Label>
+              <Input value={`₽${selectedDeal?.amount.toLocaleString('ru-RU')}`} disabled />
+            </div>
+            <div className="space-y-2">
+              <Label>Описание услуг/товаров</Label>
+              <Textarea placeholder="Опишите позиции документа..." rows={4} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDocumentDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={handleCreateDocument}>
+              Создать {documentType === 'proposal' ? 'КП' : 'счет'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
