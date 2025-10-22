@@ -90,20 +90,41 @@ function SortableItem({ id, children, onCardClick }: { id: string; children: Rea
     isDragging,
   } = useSortable({ id });
 
+  const [isDragged, setIsDragged] = useState(false);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const handleMouseDown = () => {
+    setIsDragged(false);
+  };
+
+  const handleMouseMove = () => {
+    setIsDragged(true);
+  };
+
+  const handleMouseUp = () => {
+    if (!isDragged && onCardClick) {
+      onCardClick();
+    }
+    setIsDragged(false);
+  };
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
-      <div onClick={onCardClick}>
-        {children}
-      </div>
-      <div {...listeners} className="absolute top-2 right-2 cursor-move p-1 bg-white/80 rounded hover:bg-white transition-colors opacity-0 group-hover:opacity-100">
-        <Icon name="GripVertical" size={16} className="text-muted-foreground" />
-      </div>
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      {...attributes} 
+      {...listeners}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      className="cursor-move"
+    >
+      {children}
     </div>
   );
 }
