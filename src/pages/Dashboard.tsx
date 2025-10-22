@@ -87,11 +87,13 @@ function SortableItem({ id, children }: { id: string; children: React.ReactNode 
     setNodeRef,
     transform,
     transition,
+    isDragging,
   } = useSortable({ id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
   return (
@@ -559,10 +561,21 @@ const Dashboard = () => {
                             {dealsByStage(stage.name).map((deal) => (
                               <SortableItem key={deal.id} id={deal.id.toString()}>
                                 <Card 
-                                  className="cursor-move hover:shadow-md transition-all border-l-4 border-l-primary"
+                                  className="cursor-pointer hover:shadow-md transition-all border-l-4 border-l-primary group"
+                                  onClick={(e) => {
+                                    if ((e.target as HTMLElement).closest('.sortable-drag-handle')) {
+                                      return;
+                                    }
+                                    handleOpenDeal(deal);
+                                  }}
                                 >
-                                  <CardContent className="p-4" onClick={() => handleOpenDeal(deal)}>
-                                    <h4 className="font-semibold text-sm text-foreground mb-2">{deal.title}</h4>
+                                  <CardContent className="p-4">
+                                    <div className="flex items-start justify-between mb-2">
+                                      <h4 className="font-semibold text-sm text-foreground flex-1">{deal.title}</h4>
+                                      <div className="sortable-drag-handle cursor-move p-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                                        <Icon name="GripVertical" size={14} className="text-muted-foreground" />
+                                      </div>
+                                    </div>
                                     <p className="text-xs text-muted-foreground mb-2">{deal.company}</p>
                                     <div className="flex items-center justify-between">
                                       <span className="text-sm font-bold text-foreground">
@@ -720,11 +733,22 @@ const Dashboard = () => {
                               {dealsByStage(stage.name).map((deal) => (
                                 <SortableItem key={deal.id} id={deal.id.toString()}>
                                   <Card 
-                                    className="cursor-move hover:shadow-lg transition-all border-l-4 border-l-primary bg-white"
+                                    className="cursor-move hover:shadow-lg transition-all border-l-4 border-l-primary bg-white group"
+                                    onClick={(e) => {
+                                      if ((e.target as HTMLElement).closest('.sortable-drag-handle')) {
+                                        return;
+                                      }
+                                      handleOpenDeal(deal);
+                                    }}
                                   >
                                     <CardContent className="p-4">
-                                      <div onClick={() => handleOpenDeal(deal)}>
-                                        <h4 className="font-semibold text-base text-foreground mb-2">{deal.title}</h4>
+                                      <div>
+                                        <div className="flex items-start justify-between mb-2">
+                                          <h4 className="font-semibold text-base text-foreground flex-1">{deal.title}</h4>
+                                          <div className="sortable-drag-handle cursor-move p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Icon name="GripVertical" size={16} className="text-muted-foreground" />
+                                          </div>
+                                        </div>
                                         <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
                                           <Icon name="Building2" size={14} />
                                           {deal.company}
