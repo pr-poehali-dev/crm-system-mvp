@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -238,19 +238,47 @@ const Dashboard = () => {
     })
   );
 
-  const handleDragEnd = (event: DragEndEvent, stage: string) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (over && active.id !== over.id) {
-      const stageDeals = deals.filter(d => d.stage === stage);
-      const oldIndex = stageDeals.findIndex(d => d.id.toString() === active.id);
-      const newIndex = stageDeals.findIndex(d => d.id.toString() === over.id);
+    if (!over) return;
+
+    const activeDealId = Number(active.id);
+    const activeDeal = deals.find(d => d.id === activeDealId);
+    
+    if (!activeDeal) return;
+
+    const overDealId = Number(over.id);
+    const overDeal = deals.find(d => d.id === overDealId);
+
+    if (overDeal && activeDeal.stage === overDeal.stage && activeDealId !== overDealId) {
+      const stageDeals = deals.filter(d => d.stage === activeDeal.stage);
+      const oldIndex = stageDeals.findIndex(d => d.id === activeDealId);
+      const newIndex = stageDeals.findIndex(d => d.id === overDealId);
 
       const reorderedStageDeals = arrayMove(stageDeals, oldIndex, newIndex);
-      
-      const otherDeals = deals.filter(d => d.stage !== stage);
+      const otherDeals = deals.filter(d => d.stage !== activeDeal.stage);
       setDeals([...otherDeals, ...reorderedStageDeals]);
     }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    
+    if (!over) return;
+
+    const activeDealId = Number(active.id);
+    const overDealId = Number(over.id);
+    
+    const activeDeal = deals.find(d => d.id === activeDealId);
+    const overDeal = deals.find(d => d.id === overDealId);
+
+    if (!activeDeal || !overDeal) return;
+    if (activeDeal.stage === overDeal.stage) return;
+
+    setDeals(deals.map(deal => 
+      deal.id === activeDealId ? { ...deal, stage: overDeal.stage } : deal
+    ));
   };
 
   const handleDealStageChange = (dealId: number, newStage: string) => {
@@ -468,19 +496,20 @@ const Dashboard = () => {
                 <CardDescription>Перетащите карточки сделок между этапами</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {funnelStages.map((stage) => (
-                    <div key={stage.name} className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Badge className={stage.color}>{stage.name}</Badge>
-                        <span className="text-sm text-muted-foreground">{dealsByStage(stage.name).length}</span>
-                      </div>
-                      
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={(event) => handleDragEnd(event, stage.name)}
-                      >
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={handleDragOver}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {funnelStages.map((stage) => (
+                      <div key={stage.name} className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Badge className={stage.color}>{stage.name}</Badge>
+                          <span className="text-sm text-muted-foreground">{dealsByStage(stage.name).length}</span>
+                        </div>
+                        
                         <SortableContext
                           items={dealsByStage(stage.name).map(d => d.id.toString())}
                           strategy={verticalListSortingStrategy}
@@ -490,9 +519,8 @@ const Dashboard = () => {
                               <SortableItem key={deal.id} id={deal.id.toString()}>
                                 <Card 
                                   className="cursor-move hover:shadow-md transition-all border-l-4 border-l-primary"
-                                  onClick={() => handleOpenDeal(deal)}
                                 >
-                                  <CardContent className="p-4">
+                                  <CardContent className="p-4" onClick={() => handleOpenDeal(deal)}>
                                     <h4 className="font-semibold text-sm text-foreground mb-2">{deal.title}</h4>
                                     <p className="text-xs text-muted-foreground mb-2">{deal.company}</p>
                                     <div className="flex items-center justify-between">
@@ -510,10 +538,10 @@ const Dashboard = () => {
                             ))}
                           </div>
                         </SortableContext>
-                      </DndContext>
-                    </div>
-                  ))}
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                </DndContext>
               </CardContent>
             </Card>
 
@@ -610,13 +638,12 @@ const Dashboard = () => {
               
               <TabsContent value="all" className="space-y-4">
                 {deals.map((deal) => (
-                  <Card key={deal.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleOpenDeal(deal)}>
+                  <Card key={deal.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
+                        <div className="flex-1 cursor-pointer" onClick={() => handleOpenDeal(deal)}>
                           <div className="flex items-center gap-3 mb-2">
                             <h3 className="text-lg font-semibold text-foreground">{deal.title}</h3>
-                            <Badge variant="outline">{deal.stage}</Badge>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -633,20 +660,91 @@ const Dashboard = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-foreground">
-                            ₽{deal.amount.toLocaleString('ru-RU')}
+                        <div className="text-right flex flex-col items-end gap-3">
+                          <div>
+                            <div className="text-2xl font-bold text-foreground">
+                              ₽{deal.amount.toLocaleString('ru-RU')}
+                            </div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Progress value={deal.probability} className="w-24 h-2" />
+                              <span className="text-sm text-muted-foreground">{deal.probability}%</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Progress value={deal.probability} className="w-24 h-2" />
-                            <span className="text-sm text-muted-foreground">{deal.probability}%</span>
-                          </div>
+                          <Select 
+                            value={deal.stage}
+                            onValueChange={(value) => handleDealStageChange(deal.id, value)}
+                          >
+                            <SelectTrigger className="w-48" onClick={(e) => e.stopPropagation()}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {funnelStages.map((stage) => (
+                                <SelectItem key={stage.name} value={stage.name}>{stage.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
               </TabsContent>
+              
+              {funnelStages.map((stage) => (
+                <TabsContent key={stage.name} value={stage.name} className="space-y-4">
+                  {dealsByStage(stage.name).map((deal) => (
+                    <Card key={deal.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 cursor-pointer" onClick={() => handleOpenDeal(deal)}>
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="text-lg font-semibold text-foreground">{deal.title}</h3>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Icon name="Building2" size={16} />
+                                <span>{deal.company}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Icon name="User" size={16} />
+                                <span>{deal.contact}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Icon name="Calendar" size={16} />
+                                <span>{deal.createdAt}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right flex flex-col items-end gap-3">
+                            <div>
+                              <div className="text-2xl font-bold text-foreground">
+                                ₽{deal.amount.toLocaleString('ru-RU')}
+                              </div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Progress value={deal.probability} className="w-24 h-2" />
+                                <span className="text-sm text-muted-foreground">{deal.probability}%</span>
+                              </div>
+                            </div>
+                            <Select 
+                              value={deal.stage}
+                              onValueChange={(value) => handleDealStageChange(deal.id, value)}
+                            >
+                              <SelectTrigger className="w-48" onClick={(e) => e.stopPropagation()}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {funnelStages.map((s) => (
+                                  <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </TabsContent>
+              ))}
             </Tabs>
           </div>
         )}
