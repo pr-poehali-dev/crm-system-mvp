@@ -130,14 +130,12 @@ function SortableItem({ id, children, onCardClick }: { id: string; children: Rea
 }
 
 function DroppableStage({ id, children }: { id: string; children: React.ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
+  const { setNodeRef } = useDroppable({ id });
 
   return (
     <div 
       ref={setNodeRef} 
-      className={`space-y-2 min-h-[200px] bg-gray-50 rounded-lg p-3 transition-colors ${
-        isOver ? 'bg-primary/10 ring-2 ring-primary' : ''
-      }`}
+      className="space-y-2 min-h-[200px] bg-gray-50 rounded-lg p-3"
     >
       {children}
     </div>
