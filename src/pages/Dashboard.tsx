@@ -149,7 +149,7 @@ const Dashboard = () => {
   };
 
   const navItems: { id: NavItem; label: string; icon: string }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard' },
+    { id: 'dashboard', label: 'Главная', icon: 'LayoutDashboard' },
     { id: 'deals', label: 'Сделки', icon: 'TrendingUp' },
     { id: 'contacts', label: 'Контакты', icon: 'Users' },
     { id: 'companies', label: 'Компании', icon: 'Building2' },
@@ -560,7 +560,7 @@ const Dashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Icon name="Filter" size={20} />
-                  Воронка продаж (Drag & Drop)
+                  Воронка продаж
                 </CardTitle>
                 <CardDescription>Перетащите карточки сделок между этапами</CardDescription>
               </CardHeader>
