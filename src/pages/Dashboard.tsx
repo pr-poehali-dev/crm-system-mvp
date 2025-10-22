@@ -525,7 +525,7 @@ const Dashboard = () => {
           <div className="space-y-6 animate-fade-in">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+                <h1 className="text-3xl font-bold text-foreground">Главная</h1>
                 <p className="text-muted-foreground mt-1">Обзор вашей воронки продаж</p>
               </div>
               <Button className="gap-2">
