@@ -293,11 +293,19 @@ const Dashboard = () => {
     { name: 'Успех', count: 3, color: 'bg-green-100 text-green-700' },
   ];
 
+  const totalDeals = deals.length;
+  const uniqueCompanies = new Set(deals.map(d => d.company)).size;
+  const successfulDeals = deals.filter(d => d.stage === 'Успех').length;
+  const conversionRate = totalDeals > 0 ? Math.round((successfulDeals / totalDeals) * 100) : 0;
+  const averageCheck = deals.length > 0 
+    ? Math.round(deals.reduce((sum, d) => sum + d.amount, 0) / deals.length / 1000) 
+    : 0;
+
   const stats = [
-    { label: 'Всего сделок', value: '28', change: '+12%', icon: 'TrendingUp', color: 'text-blue-600' },
-    { label: 'Активных клиентов', value: '156', change: '+8%', icon: 'Users', color: 'text-purple-600' },
-    { label: 'Конверсия', value: '24%', change: '+3%', icon: 'Target', color: 'text-green-600' },
-    { label: 'Средний чек', value: '₽680K', change: '+15%', icon: 'DollarSign', color: 'text-amber-600' },
+    { label: 'Всего сделок', value: totalDeals.toString(), change: '+12%', icon: 'TrendingUp', color: 'text-blue-600' },
+    { label: 'Активных клиентов', value: uniqueCompanies.toString(), change: '+8%', icon: 'Users', color: 'text-purple-600' },
+    { label: 'Конверсия', value: `${conversionRate}%`, change: '+3%', icon: 'Target', color: 'text-green-600' },
+    { label: 'Средний чек', value: `₽${averageCheck}K`, change: '+15%', icon: 'DollarSign', color: 'text-amber-600' },
   ];
 
   const sensors = useSensors(
