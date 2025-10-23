@@ -856,56 +856,58 @@ const Dashboard = () => {
                             <span className="text-sm font-semibold text-muted-foreground">{dealsByStage(stage.name).length}</span>
                           </div>
                           
-                          <SortableContext
-                            items={dealsByStage(stage.name).map(d => d.id.toString())}
-                            strategy={verticalListSortingStrategy}
-                          >
-                            <div className="space-y-3 min-h-[400px] bg-gray-50/50 rounded-lg p-3">
-                              {dealsByStage(stage.name).map((deal) => (
-                                <div key={deal.id} className="relative group">
-                                  <SortableItem id={deal.id.toString()} onCardClick={() => handleOpenDeal(deal)}>
-                                    <Card 
-                                      className="cursor-pointer hover:shadow-lg transition-all border-l-4 border-l-primary bg-white"
-                                    >
-                                      <CardContent className="p-4">
-                                        <div>
-                                          <h4 className="font-semibold text-base text-foreground mb-2">{deal.title}</h4>
-                                          <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
-                                            <Icon name="Building2" size={14} />
-                                            {deal.company}
-                                          </p>
-                                          <div className="space-y-2">
-                                            <div className="flex items-center justify-between">
-                                              <span className="text-xs text-muted-foreground">Сумма:</span>
-                                              <span className="text-base font-bold text-foreground">
-                                                ₽{(deal.amount / 1000).toFixed(0)}K
-                                              </span>
-                                            </div>
-                                            <div className="space-y-1">
+                          <DroppableStage id={`stage-${stage.name}`}>
+                            <SortableContext
+                              items={dealsByStage(stage.name).map(d => d.id.toString())}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className="space-y-3 min-h-[400px] bg-gray-50/50 rounded-lg p-3">
+                                {dealsByStage(stage.name).map((deal) => (
+                                  <div key={deal.id} className="relative group">
+                                    <SortableItem id={deal.id.toString()} onCardClick={() => handleOpenDeal(deal)}>
+                                      <Card 
+                                        className="cursor-pointer hover:shadow-lg transition-all border-l-4 border-l-primary bg-white"
+                                      >
+                                        <CardContent className="p-4">
+                                          <div>
+                                            <h4 className="font-semibold text-base text-foreground mb-2">{deal.title}</h4>
+                                            <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                                              <Icon name="Building2" size={14} />
+                                              {deal.company}
+                                            </p>
+                                            <div className="space-y-2">
                                               <div className="flex items-center justify-between">
-                                                <span className="text-xs text-muted-foreground">Вероятность:</span>
-                                                <span className="text-xs font-medium text-foreground">{deal.probability}%</span>
+                                                <span className="text-xs text-muted-foreground">Сумма:</span>
+                                                <span className="text-base font-bold text-foreground">
+                                                  ₽{(deal.amount / 1000).toFixed(0)}K
+                                                </span>
                                               </div>
-                                              <Progress value={deal.probability} className="h-1.5" />
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
-                                              <Icon name="User" size={12} />
-                                              <span>{deal.contact}</span>
+                                              <div className="space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-xs text-muted-foreground">Вероятность:</span>
+                                                  <span className="text-xs font-medium text-foreground">{deal.probability}%</span>
+                                                </div>
+                                                <Progress value={deal.probability} className="h-1.5" />
+                                              </div>
+                                              <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
+                                                <Icon name="User" size={12} />
+                                                <span>{deal.contact}</span>
+                                              </div>
                                             </div>
                                           </div>
-                                        </div>
-                                      </CardContent>
-                                    </Card>
-                                  </SortableItem>
-                                </div>
-                              ))}
-                              {dealsByStage(stage.name).length === 0 && (
-                                <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-                                  Перетащите сюда сделки
-                                </div>
-                              )}
-                            </div>
-                          </SortableContext>
+                                        </CardContent>
+                                      </Card>
+                                    </SortableItem>
+                                  </div>
+                                ))}
+                                {dealsByStage(stage.name).length === 0 && (
+                                  <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+                                    Перетащите сюда сделки
+                                  </div>
+                                )}
+                              </div>
+                            </SortableContext>
+                          </DroppableStage>
                         </div>
                       ))}
                     </div>
