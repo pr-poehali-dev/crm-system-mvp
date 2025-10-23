@@ -27,6 +27,13 @@ interface Comment {
   date: string;
 }
 
+interface StageHistory {
+  id: number;
+  stage: string;
+  timestamp: string;
+  user: string;
+}
+
 interface Deal {
   id: number;
   title: string;
@@ -39,6 +46,7 @@ interface Deal {
   comments: Comment[];
   description?: string;
   lostReason?: string;
+  stageHistory: StageHistory[];
 }
 
 interface Contact {
@@ -95,7 +103,7 @@ function SortableItem({ id, children, onCardClick }: { id: string; children: Rea
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: transition || 'transform 200ms ease',
     opacity: isDragging ? 0.5 : 1,
   };
 
@@ -191,6 +199,10 @@ const Dashboard = () => {
       comments: [
         { id: 1, author: 'Вы', text: 'Договорились о встрече на следующей неделе', date: '2024-10-20 14:30' },
         { id: 2, author: 'Иван Петров', text: 'Отправил ТЗ на оборудование', date: '2024-10-21 10:15' },
+      ],
+      stageHistory: [
+        { id: 1, stage: 'Заявка', timestamp: '2024-10-15 10:00', user: 'Система' },
+        { id: 2, stage: 'Переговоры', timestamp: '2024-10-16 14:30', user: userName },
       ]
     },
     { 
@@ -205,6 +217,10 @@ const Dashboard = () => {
       description: 'Внедрение CRM-системы для управления клиентами',
       comments: [
         { id: 3, author: 'Вы', text: 'Провели демо системы', date: '2024-10-19 16:00' },
+      ],
+      stageHistory: [
+        { id: 1, stage: 'Заявка', timestamp: '2024-10-18 09:00', user: 'Система' },
+        { id: 2, stage: 'Отправка КП', timestamp: '2024-10-19 16:30', user: userName },
       ]
     },
     { 
@@ -217,7 +233,10 @@ const Dashboard = () => {
       probability: 30, 
       createdAt: '2024-10-20',
       description: 'Консультации по оптимизации бизнес-процессов',
-      comments: []
+      comments: [],
+      stageHistory: [
+        { id: 1, stage: 'Заявка', timestamp: '2024-10-20 11:20', user: 'Система' },
+      ]
     },
     { 
       id: 4, 
@@ -231,6 +250,11 @@ const Dashboard = () => {
       description: 'Поставка лицензий на корпоративное ПО',
       comments: [
         { id: 4, author: 'Мария Волкова', text: 'Нужно коммерческое предложение', date: '2024-10-21 11:20' },
+      ],
+      stageHistory: [
+        { id: 1, stage: 'Заявка', timestamp: '2024-10-19 08:00', user: 'Система' },
+        { id: 2, stage: 'Отправка КП', timestamp: '2024-10-20 10:00', user: userName },
+        { id: 3, stage: 'Запущено в работу', timestamp: '2024-10-21 15:00', user: userName },
       ]
     },
     { 
@@ -243,7 +267,10 @@ const Dashboard = () => {
       probability: 25, 
       createdAt: '2024-10-21',
       description: 'Первичный запрос на расчет стоимости услуг',
-      comments: []
+      comments: [],
+      stageHistory: [
+        { id: 1, stage: 'Заявка', timestamp: '2024-10-21 13:45', user: 'Система' },
+      ]
     },
     { 
       id: 6, 
@@ -257,6 +284,12 @@ const Dashboard = () => {
       description: 'Успешно завершенная сделка по поставке оборудования',
       comments: [
         { id: 5, author: 'Вы', text: 'Договор подписан, оплата получена', date: '2024-10-10 12:00' },
+      ],
+      stageHistory: [
+        { id: 1, stage: 'Заявка', timestamp: '2024-09-15 09:00', user: 'Система' },
+        { id: 2, stage: 'Отправка КП', timestamp: '2024-09-18 11:00', user: userName },
+        { id: 3, stage: 'Запущено в работу', timestamp: '2024-09-25 14:00', user: userName },
+        { id: 4, stage: 'Сделка закрыта', timestamp: '2024-10-10 12:00', user: userName },
       ]
     },
     { 
@@ -271,6 +304,12 @@ const Dashboard = () => {
       description: 'Завершенный проект по IT-консалтингу',
       comments: [
         { id: 6, author: 'Вы', text: 'Проект завершен успешно', date: '2024-10-15 09:30' },
+      ],
+      stageHistory: [
+        { id: 1, stage: 'Заявка', timestamp: '2024-09-20 10:30', user: 'Система' },
+        { id: 2, stage: 'Отправка КП', timestamp: '2024-09-22 15:00', user: userName },
+        { id: 3, stage: 'Запущено в работу', timestamp: '2024-10-01 09:00', user: userName },
+        { id: 4, stage: 'Сделка закрыта', timestamp: '2024-10-15 09:30', user: userName },
       ]
     },
   ]);
@@ -357,7 +396,19 @@ const Dashboard = () => {
       
       if (activeDeal.stage !== newStage) {
         setDeals(deals.map(deal => 
-          deal.id === activeDealId ? { ...deal, stage: newStage } : deal
+          deal.id === activeDealId ? { 
+            ...deal, 
+            stage: newStage,
+            stageHistory: [
+              ...deal.stageHistory,
+              {
+                id: deal.stageHistory.length + 1,
+                stage: newStage,
+                timestamp: new Date().toLocaleString('ru-RU'),
+                user: userName
+              }
+            ]
+          } : deal
         ));
       }
       return;
@@ -385,7 +436,19 @@ const Dashboard = () => {
 
     if (overDeal && activeDeal.stage !== overDeal.stage) {
       setDeals(deals.map(deal => 
-        deal.id === activeDealId ? { ...deal, stage: overDeal.stage } : deal
+        deal.id === activeDealId ? { 
+          ...deal, 
+          stage: overDeal.stage,
+          stageHistory: [
+            ...deal.stageHistory,
+            {
+              id: deal.stageHistory.length + 1,
+              stage: overDeal.stage,
+              timestamp: new Date().toLocaleString('ru-RU'),
+              user: userName
+            }
+          ]
+        } : deal
       ));
     }
   };
@@ -411,7 +474,19 @@ const Dashboard = () => {
       
       if (activeDeal.stage !== newStage) {
         setDeals(deals.map(deal => 
-          deal.id === activeDealId ? { ...deal, stage: newStage } : deal
+          deal.id === activeDealId ? { 
+            ...deal, 
+            stage: newStage,
+            stageHistory: [
+              ...deal.stageHistory,
+              {
+                id: deal.stageHistory.length + 1,
+                stage: newStage,
+                timestamp: new Date().toLocaleString('ru-RU'),
+                user: userName
+              }
+            ]
+          } : deal
         ));
       }
       return;
@@ -429,7 +504,19 @@ const Dashboard = () => {
     if (activeDeal.stage === overDeal.stage) return;
 
     setDeals(deals.map(deal => 
-      deal.id === activeDealId ? { ...deal, stage: overDeal.stage } : deal
+      deal.id === activeDealId ? { 
+        ...deal, 
+        stage: overDeal.stage,
+        stageHistory: [
+          ...deal.stageHistory,
+          {
+            id: deal.stageHistory.length + 1,
+            stage: overDeal.stage,
+            timestamp: new Date().toLocaleString('ru-RU'),
+            user: userName
+          }
+        ]
+      } : deal
     ));
   };
 
@@ -453,7 +540,20 @@ const Dashboard = () => {
     
     setDeals(deals.map(deal => 
       deal.id === pendingLostDeal.id 
-        ? { ...deal, stage: 'Сделка не состоялась', lostReason: reason } 
+        ? { 
+            ...deal, 
+            stage: 'Сделка не состоялась', 
+            lostReason: reason,
+            stageHistory: [
+              ...deal.stageHistory,
+              {
+                id: deal.stageHistory.length + 1,
+                stage: 'Сделка не состоялась',
+                timestamp: new Date().toLocaleString('ru-RU'),
+                user: userName
+              }
+            ]
+          } 
         : deal
     ));
     
@@ -848,7 +948,7 @@ const Dashboard = () => {
                     onDragEnd={handleDragEnd}
                     onDragOver={handleDragOver}
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-5 gap-4 overflow-x-auto">
                       {funnelStages.map((stage) => (
                         <div key={stage.name} className="space-y-3">
                           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -1641,8 +1741,9 @@ const Dashboard = () => {
               </DialogHeader>
 
               <Tabs defaultValue="details" className="mt-4">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="details">Детали</TabsTrigger>
+                  <TabsTrigger value="history">История</TabsTrigger>
                   <TabsTrigger value="comments">Комментарии ({selectedDeal.comments.length})</TabsTrigger>
                   <TabsTrigger value="documents">Документы</TabsTrigger>
                 </TabsList>
@@ -1702,6 +1803,46 @@ const Dashboard = () => {
                   <div>
                     <Label className="text-muted-foreground">Описание</Label>
                     <p className="text-foreground mt-2">{selectedDeal.description || 'Описание не указано'}</p>
+                  </div>
+
+                  {selectedDeal.lostReason && (
+                    <>
+                      <Separator />
+                      <div>
+                        <Label className="text-muted-foreground">Причина отказа</Label>
+                        <div className="mt-2 p-4 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-red-700 font-medium">{selectedDeal.lostReason}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="history" className="space-y-4">
+                  <div className="space-y-3">
+                    {selectedDeal.stageHistory.map((history, index) => (
+                      <div key={history.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                        <div className="flex flex-col items-center">
+                          <div className={`w-3 h-3 rounded-full ${
+                            index === selectedDeal.stageHistory.length - 1 ? 'bg-primary' : 'bg-gray-300'
+                          }`} />
+                          {index < selectedDeal.stageHistory.length - 1 && (
+                            <div className="w-0.5 h-12 bg-gray-200 my-1" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="font-medium text-foreground">{history.stage}</p>
+                            <Badge variant="outline" className="text-xs">
+                              {index === selectedDeal.stageHistory.length - 1 ? 'Текущий' : 'Завершен'}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {history.timestamp} • {history.user}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </TabsContent>
 
