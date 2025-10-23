@@ -780,9 +780,9 @@ const Dashboard = () => {
                   onDragEnd={handleDragEnd}
                   onDragOver={handleDragOver}
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-5 gap-4 overflow-x-auto">
                     {funnelStages.map((stage) => (
-                      <div key={stage.name} className="space-y-3">
+                      <div key={stage.name} className="space-y-3 min-w-[240px]">
                         <div className="flex items-center justify-between">
                           <Badge className={stage.color}>{stage.name}</Badge>
                           <span className="text-sm text-muted-foreground">{dealsByStage(stage.name).length}</span>
