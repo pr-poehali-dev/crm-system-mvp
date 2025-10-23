@@ -344,30 +344,6 @@ const Dashboard = () => {
     
     if (!activeDeal) return;
 
-    const overDealId = Number(over.id);
-    const overDeal = deals.find(d => d.id === overDealId);
-
-    if (overDeal && activeDeal.stage === overDeal.stage && activeDealId !== overDealId) {
-      const stageDeals = deals.filter(d => d.stage === activeDeal.stage);
-      const oldIndex = stageDeals.findIndex(d => d.id === activeDealId);
-      const newIndex = stageDeals.findIndex(d => d.id === overDealId);
-
-      const reorderedStageDeals = arrayMove(stageDeals, oldIndex, newIndex);
-      const otherDeals = deals.filter(d => d.stage !== activeDeal.stage);
-      setDeals([...otherDeals, ...reorderedStageDeals]);
-    }
-  };
-
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    
-    if (!over) return;
-
-    const activeDealId = Number(active.id);
-    const activeDeal = deals.find(d => d.id === activeDealId);
-    
-    if (!activeDeal) return;
-
     const overIdStr = over.id.toString();
     
     if (overIdStr.startsWith('stage-')) {
@@ -386,15 +362,56 @@ const Dashboard = () => {
       }
       return;
     }
+
+    const overDealId = Number(over.id);
+    const overDeal = deals.find(d => d.id === overDealId);
+
+    if (overDeal && activeDeal.stage === overDeal.stage && activeDealId !== overDealId) {
+      const stageDeals = deals.filter(d => d.stage === activeDeal.stage);
+      const oldIndex = stageDeals.findIndex(d => d.id === activeDealId);
+      const newIndex = stageDeals.findIndex(d => d.id === overDealId);
+
+      const reorderedStageDeals = arrayMove(stageDeals, oldIndex, newIndex);
+      const otherDeals = deals.filter(d => d.stage !== activeDeal.stage);
+      setDeals([...otherDeals, ...reorderedStageDeals]);
+      return;
+    }
+    
+    if (overDeal && overDeal.stage === 'Сделка не состоялась' && activeDeal.stage !== overDeal.stage) {
+      setPendingLostDeal(activeDeal);
+      setLostReasonDialogOpen(true);
+      return;
+    }
+
+    if (overDeal && activeDeal.stage !== overDeal.stage) {
+      setDeals(deals.map(deal => 
+        deal.id === activeDealId ? { ...deal, stage: overDeal.stage } : deal
+      ));
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    
+    if (!over) return;
+
+    const activeDealId = Number(active.id);
+    const activeDeal = deals.find(d => d.id === activeDealId);
+    
+    if (!activeDeal) return;
+
+    const overIdStr = over.id.toString();
+    
+    if (overIdStr.startsWith('stage-')) {
+      return;
+    }
     
     const overDealId = Number(over.id);
     const overDeal = deals.find(d => d.id === overDealId);
 
     if (!overDeal) return;
     
-    if (overDeal.stage === 'Сделка не состоялась' && activeDeal.stage !== overDeal.stage) {
-      setPendingLostDeal(activeDeal);
-      setLostReasonDialogOpen(true);
+    if (overDeal.stage === 'Сделка не состоялась') {
       return;
     }
     
