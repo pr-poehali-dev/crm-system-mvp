@@ -403,6 +403,17 @@ const Dashboard = () => {
     const overIdStr = over.id.toString();
     
     if (overIdStr.startsWith('stage-')) {
+      const newStage = overIdStr.replace('stage-', '');
+      
+      if (newStage === 'Сделка не состоялась') {
+        return;
+      }
+      
+      if (activeDeal.stage !== newStage) {
+        setDeals(deals.map(deal => 
+          deal.id === activeDealId ? { ...deal, stage: newStage } : deal
+        ));
+      }
       return;
     }
     
